@@ -35,7 +35,7 @@ pipeline {
         stage('Sonar Analysis') {
             steps {
                 withSonarQubeEnv('sonar-server') {
-                    bat "$SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=Ranjith -Dsonar.projectKey=RanjithKey -Dsonar.java.binaries=target"
+                    bat "$SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=Ranjith -Dsonar.projectKey=RanjithKey -Dsonar.java.binaries=target/classes"
                 }
             }
         }
