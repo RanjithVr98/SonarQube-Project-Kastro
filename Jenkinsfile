@@ -22,27 +22,27 @@ pipeline {
 
         stage('Compile') {
             steps {
-                sh "mvn compile"
+                bat "mvn compile"
             }
         }
 
         stage('Test') {
             steps {
-                sh "mvn test"
+                bat "mvn test"
             }
         }
 
         stage('Sonar Analysis') {
             steps {
                 withSonarQubeEnv('sonar-server') {
-                    sh "$SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=Ranjith -Dsonar.projectKey=RanjithKey -Dsonar.java.binaries=target"
+                    bat "$SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=Ranjith -Dsonar.projectKey=RanjithKey -Dsonar.java.binaries=target"
                 }
             }
         }
 
         stage('Build') {
             steps {
-                sh "mvn package"
+                bat "mvn package"
             }
         }
 
@@ -50,7 +50,7 @@ pipeline {
             steps {
                 script {
                     // Building Docker Image
-                    sh "docker build -t $DOCKER_IMAGE ."
+                    bat "docker build -t $DOCKER_IMAGE ."
                 }
             }
         }
@@ -61,8 +61,8 @@ pipeline {
                     withCredentials([usernamePassword(credentialsId: 'Dockerhub', usernameVariable: 'DOCKERHUB_USERNAME', passwordVariable: 'DOCKERHUB_PASSWORD')]) {
                         echo "Docker Hub Username: ${DOCKERHUB_USERNAME}"  // Check the username
                         echo "Docker Image: ${DOCKER_IMAGE}"  // Check the image
-                        sh "docker login -u ${DOCKERHUB_USERNAME} -p ${DOCKERHUB_PASSWORD}"
-                        sh "docker push $DOCKER_IMAGE"
+                        bat "docker login -u ${DOCKERHUB_USERNAME} -p ${DOCKERHUB_PASSWORD}"
+                        bat "docker push $DOCKER_IMAGE"
                     }
                 }
             }
@@ -72,10 +72,10 @@ pipeline {
             steps {
                 script {
                     // Stop any existing container with the same name
-                    sh "docker stop spotify-app || true && docker rm spotify-app || true"
+                    bat "docker stop spotify-app || true && docker rm spotify-app || true"
                     
                     // Running the container
-                    sh "docker run -d --name spotify-app -p 5555:5555 $DOCKER_IMAGE"
+                    bat "docker run -d --name spotify-app -p 5555:5555 $DOCKER_IMAGE"
                 }
             }
         }
