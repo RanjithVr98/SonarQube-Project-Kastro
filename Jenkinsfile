@@ -1,44 +1,49 @@
+
 pipeline {
     agent any
+
+    options {
+        skipDefaultCheckout(true)
+    }
 
     tools {
         maven 'maven3'
         jdk 'jdk21'
-        // Remove the sonarQube line if it still causes issues
     }
 
     environment {
         SCANNER_HOME = tool 'sonar-scanner'
-        DOCKERHUB_USERNAME = 'ranjithjrdocker'  // Set this directly to your Docker Hub username
+        DOCKERHUB_USERNAME = 'ranjithjrdocker'
         DOCKER_IMAGE = "${DOCKERHUB_USERNAME}/spotify-app:latest"
     }
 
     stages {
         stage('Git Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/RanjithVr98/SonarQube-Project-Kastro.git'
+                git branch: 'main',
+                    url: 'https://github.com/RanjithVr98/SonarQube-Project-Kastro.git'
             }
         }
 
-        stage('Compile') {
+        stage('Build and Test') {
             steps {
-                bat "mvn compile"
-            }
-        }
-
-        stage('Test') {
-            steps {
-                bat "mvn test"
+                bat 'mvn clean verify'
             }
         }
 
         stage('Sonar Analysis') {
             steps {
                 withSonarQubeEnv('sonar-server') {
-                    bat "$SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=Ranjith -Dsonar.projectKey=RanjithKey -Dsonar.java.binaries=target/classes"
+                    bat '''
+                        "%SCANNER_HOME%\\bin\\sonar-scanner.bat" ^
+                        -Dsonar.projectName=Ranjith ^
+                        -Dsonar.projectKey=RanjithKey ^
+                        -Dsonar.java.binaries=target/classes
+                    '''
                 }
             }
         }
+
         stage('Quality Gate') {
             steps {
                 timeout(time: 5, unit: 'MINUTES') {
@@ -51,40 +56,41 @@ pipeline {
                 }
             }
         }
-        
-        stage('Build') {
-            steps {
-                bat "mvn package"
-            }
-        }
 
         stage('Docker Build') {
             steps {
-                script {
-                    // Building Docker Image
-                    bat "docker build -t $DOCKER_IMAGE ."
-                }
+                bat 'docker build -t %DOCKER_IMAGE% .'
             }
         }
 
         stage('Docker Push to DockerHub') {
-            steps { 
-                     withCredentials([usernamePassword(credentialsId: 'Dockerhub', usernameVariable: 'DOCKERHUB_USERNAME', passwordVariable: 'DOCKERHUB_PASSWORD')]) {
-                         bat 'echo %DOCKERHUB_PASSWORD%| docker login -u %DOCKERHUB_USERNAME% --password-stdin'
-                         bat "docker push ${DOCKER_IMAGE}"
-                    }
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'Dockerhub',
+                        usernameVariable: 'REGISTRY_USER',
+                        passwordVariable: 'REGISTRY_PASSWORD'
+                    )
+                ]) {
+                    bat '''
+                        @echo off
+                        echo %REGISTRY_PASSWORD% | docker login --username %REGISTRY_USER% --password-stdin
+                        if errorlevel 1 exit /b 1
+
+                        docker push %DOCKER_IMAGE%
+                        if errorlevel 1 exit /b 1
+                    '''
+                }
             }
         }
 
         stage('Run Docker Container') {
             steps {
-                script {
-                    // Stop any existing container with the same name
-                    bat 'docker rm -f spotify-app || exit /b 0'
-                    
-                    // Running the container
-                    bat "docker run -d --name spotify-app -p 5555:5555 ${DOCKER_IMAGE}"
-                }
+                bat '''
+                    docker rm -f spotify-app 2>nul
+                    docker run -d --name spotify-app -p 5555:5555 %DOCKER_IMAGE%
+                    if errorlevel 1 exit /b 1
+                '''
             }
         }
     }
@@ -92,7 +98,7 @@ pipeline {
     post {
         always {
             echo 'Cleaning up workspace...'
-            cleanWs()  // Clean up the workspace after the build
+            cleanWs()
         }
     }
 }
