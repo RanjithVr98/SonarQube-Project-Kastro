@@ -39,7 +39,19 @@ pipeline {
                 }
             }
         }
-
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    script {
+                        def qg = waitForQualityGate(
+                            abortPipeline: true
+                        )
+                        echo "Quality Gate Status: ${qg.status}"
+                    }
+                }
+            }
+        }
+        
         stage('Build') {
             steps {
                 bat "mvn package"
