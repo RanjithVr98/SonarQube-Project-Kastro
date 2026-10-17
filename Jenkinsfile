@@ -68,10 +68,10 @@ pipeline {
             steps {
                 script {
                     // Stop any existing container with the same name
-                    bat "docker stop spotify-app || true && docker rm spotify-app || true"
+                    bat 'docker rm -f spotify-app || exit /b 0'
                     
                     // Running the container
-                    bat "docker run -d --name spotify-app -p 5555:5555 $DOCKER_IMAGE"
+                    bat "docker run -d --name spotify-app -p 5555:5555 ${DOCKER_IMAGE}"
                 }
             }
         }
